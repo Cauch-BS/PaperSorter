@@ -1,16 +1,6 @@
-# Setting Up Notifications in PaperSorter
+# Setting Up Notifications
 
 PaperSorter supports sending notifications to Slack, Discord, and Email. The system automatically detects the notification type based on the URL and formats messages accordingly.
-
-## Table of Contents
-- [Quick Start](#quick-start)
-- [Slack Setup](#slack-setup)
-- [Discord Setup](#discord-setup)
-- [Email Setup](#email-setup)
-- [Channel Configuration](#channel-configuration)
-- [Testing Webhooks](#testing-webhooks)
-- [Notification Features](#notification-features)
-- [Troubleshooting](#troubleshooting)
 
 ## Quick Start
 
@@ -75,20 +65,6 @@ When PaperSorter sends to Slack, you get:
   - Authors with pen emoji
 - **Clickable links** for article sources
 
-### Enabling Slack Interactivity (Optional)
-
-To make the feedback buttons work directly in Slack:
-
-1. **Configure your Slack App**:
-   - Go to "Interactivity & Shortcuts"
-   - Toggle ON "Interactivity"
-2. **Set Request URL**:
-   ```
-   https://your-domain.com/slack-interactivity
-   ```
-   (Must be HTTPS)
-3. **Save changes**
-
 ## Discord Setup
 
 ### Creating a Discord Webhook
@@ -127,57 +103,149 @@ When PaperSorter sends to Discord, you get:
 
 ## Email Setup
 
+### Quick Start for Email
+
+1. **Add SMTP configuration** to `config.yml`:
+   ```yaml
+   # For Gmail (recommended)
+   smtp:
+     provider: gmail
+     username: "your@gmail.com"
+     password: "xxxx-xxxx-xxxx-xxxx"  # App password from Google
+
+   email:
+     from_address: "your@gmail.com"
+     from_name: "PaperSorter"
+   ```
+
+2. **Test the configuration**:
+   ```bash
+   papersorter test smtp -r test@example.com
+   ```
+
+3. **Add email channel** in web interface:
+   - Go to Settings → Channels
+   - Add webhook URL: `mailto:recipient@example.com`
+   - Set score threshold and save
+
+4. **Run broadcast**:
+   ```bash
+   papersorter broadcast
+   ```
+
 ### Configuring Email Notifications
 
 Email notifications send newsletter-style digests containing multiple papers in a single email.
 
-#### 1. SMTP Server Configuration
+#### SMTP Server Configuration
 
-Add SMTP settings to your `config.yml`:
+PaperSorter supports both authenticated and unauthenticated SMTP servers. Configure in your `config.yml`:
+
+##### Provider-based Configuration (Recommended for Public Services)
+
+For Gmail, Outlook, or Yahoo, use the simplified provider configuration:
 
 ```yaml
+# Gmail configuration
 smtp:
-  host: "smtp.gmail.com"  # Your SMTP server
-  port: 587               # Usually 587 for TLS, 465 for SSL
-  use_tls: true          # Enable TLS/STARTTLS
-  username: "your-email@gmail.com"  # Optional: for authentication
-  password: "your-app-password"     # Optional: for authentication
+  provider: gmail
+  username: "your-email@gmail.com"
+  password: "your-app-password"  # Use app-specific password
+
+email:
+  from_address: "your-email@gmail.com"
+  from_name: "PaperSorter Newsletter"
 ```
-
-**For Gmail users**:
-- Use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password
-- Enable "Less secure app access" or use OAuth2
-
-**For other providers**:
-- **Outlook/Office365**: smtp.office365.com:587
-- **Yahoo**: smtp.mail.yahoo.com:587
-- **SendGrid**: smtp.sendgrid.net:587
-- **AWS SES**: email-smtp.[region].amazonaws.com:587
-
-#### 2. Adding Email Channels
-
-1. Navigate to Settings → Channels
-2. Click "Add Channel"
-3. Enter email in `mailto:` format:
-   ```
-   mailto:researcher@university.edu
-   ```
-4. Configure settings:
-   - **Channel Name**: e.g., "Daily Digest"
-   - **Score Threshold**: Papers above this score
-   - **Broadcast Limit**: Max papers per email (default: 20)
-   - **Broadcast Hours**: When to send emails
-
-#### 3. Email Subject Configuration
-
-Customize the email subject in `config.yml`:
 
 ```yaml
+# Outlook.com/Hotmail configuration (Personal accounts only)
+smtp:
+  provider: outlook
+  username: "your-email@outlook.com"
+  password: "your-app-password"  # Requires 2FA enabled
+
 email:
-  subject_template: "Research Papers Digest - {date:%B %d, %Y}"
+  from_address: "your-email@outlook.com"
+  from_name: "Research Digest"
+
+# Note: This works for personal Outlook.com accounts.
+# For Microsoft 365 business accounts, OAuth2 is required
+# and app passwords will stop working after April 2026.
 ```
 
-The `{date}` placeholder supports Python datetime formatting.
+```yaml
+# Yahoo Mail configuration
+smtp:
+  provider: yahoo
+  username: "your-email@yahoo.com"
+  password: "your-app-password"
+
+email:
+  from_address: "your-email@yahoo.com"
+  from_name: "Paper Alerts"
+```
+
+##### Custom SMTP Configuration
+
+For custom SMTP servers (university, corporate, or other providers):
+
+```yaml
+# Custom SMTP with authentication
+smtp:
+  provider: custom
+  host: "mail.university.edu"
+  port: 587
+  encryption: tls  # Options: tls, ssl, none
+  username: "researcher@university.edu"
+  password: "your-password"
+
+email:
+  from_address: "researcher@university.edu"
+  from_name: "Lab Paper Digest"
+```
+
+```yaml
+# Custom SMTP without authentication (internal networks)
+smtp:
+  provider: custom
+  host: "internal-smtp.local"
+  port: 25
+  encryption: none
+  # No username/password needed for internal SMTP
+
+email:
+  from_address: "papersorter@internal.local"
+  from_name: "PaperSorter"
+```
+
+#### Important: App-Specific Passwords
+
+**Gmail users**:
+1. Enable 2-factor authentication in your Google account
+2. Generate an app password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+3. Use the 16-character app password (not your regular password)
+
+**Outlook.com (Personal accounts)**:
+1. Enable 2-factor authentication in your Microsoft account
+2. Go to [account.microsoft.com/security](https://account.microsoft.com/security)
+3. Navigate to "Advanced security options" → "App passwords"
+4. Create a new app password
+5. Use this app password (not your regular password) in the configuration
+
+   Note: Microsoft is phasing out app passwords. This method works as of 2025 but may be deprecated in the future.
+
+**Microsoft 365 (Business accounts)**:
+- App passwords are being deprecated and will stop working after April 2026
+- OAuth2 is now required for business accounts
+- For automated systems, consider using Microsoft's alternatives:
+  - Azure Communication Services
+  - Microsoft Graph API
+- Or use a different SMTP service for notifications
+
+**Yahoo users**:
+1. Enable 2-step verification in your Yahoo account
+2. Generate an app password at [login.yahoo.com/myaccount/security](https://login.yahoo.com/myaccount/security)
+3. Use the app password for SMTP authentication
 
 ### Email Notification Features
 
@@ -193,19 +261,6 @@ The `{date}` placeholder supports Python datetime formatting.
   - "More Like This" button (if base_url configured)
 - **Channel name** in email header
 - **Summary statistics**: Number of papers and sources
-
-### Email Template Customization
-
-Templates are located in `PaperSorter/templates/email/`:
-- `newsletter.html`: HTML version
-- `newsletter.txt`: Plain text version
-
-You can customize these templates using Jinja2 syntax. Available variables:
-- `papers`: List of paper objects
-- `channel_name`: Name of the channel
-- `date`: Current date
-- `base_url`: Web interface URL (if configured)
-- `source_count`: Number of unique sources
 
 ## Channel Configuration
 
@@ -232,7 +287,6 @@ You can customize these templates using Jinja2 syntax. Available variables:
      - <0.5 = Include everything (not recommended)
    - **Broadcast Limit**: Prevents notification spam (default: 20)
    - **Model ID**: Use different models for different topics
-   
    - **Broadcast Hours**: Time restrictions for sending notifications
      - Select individual hours when broadcasting is allowed
      - All selected = 24/7 broadcasting
@@ -246,37 +300,6 @@ You can customize these templates using Jinja2 syntax. Available variables:
 1. Go to Settings → Channels
 2. Click "Test" button next to any channel
 3. Check your Slack/Discord/Email for test message
-
-## Notification Features
-
-### Automatic Webhook Detection
-
-PaperSorter automatically detects the notification type based on the URL:
-- URLs containing `slack.com` → Slack formatting
-- URLs containing `discord.com` or `discordapp.com` → Discord formatting  
-- URLs starting with `mailto:` → Email newsletter
-- Unknown URLs → Default to Slack formatting
-
-### Message Content
-
-All notifications include:
-- **Paper title** and abstract/summary
-- **Authors** and publication source
-- **Prediction score** (0-100%)
-- **Direct link** to the paper
-- **Action links** for feedback and discovery
-
-### Feedback System
-
-The feedback buttons/links allow users to:
-1. **Mark papers as interesting**: Improves model training
-2. **Mark as not interesting**: Helps filter future papers
-3. **Find similar papers**: Discovers related research
-
-Feedback is stored in the database and can be used to retrain models:
-```bash
-papersorter train  # Incorporates feedback into model
-```
 
 ## Troubleshooting
 
@@ -324,69 +347,35 @@ papersorter train  # Incorporates feedback into model
    WHERE broadcasted_time IS NULL;
    ```
 
-#### Discord Rate Limits
+#### Rate Limits
 
-Discord webhooks have rate limits:
-- **30 requests per minute** per webhook
-- PaperSorter will show "rate limit" errors if exceeded
-- Solution: Reduce `broadcast_limit` in channel settings
+**Discord**: 30 requests per minute per webhook
+**Slack**: 1 message per second sustained
 
-#### Slack Rate Limits
-
-Slack is more generous but still has limits:
-- **1 message per second** sustained
-- Burst capability for short periods
+Solution: Reduce `broadcast_limit` in channel settings
 
 #### Email Troubleshooting
 
 Common email issues and solutions:
 
 1. **Connection errors**:
+   ```bash
+   # Test SMTP connection
+   papersorter test smtp -v
+   ```
    - Check SMTP host and port settings
-   - Verify firewall allows outbound SMTP
-   - Try telnet: `telnet smtp.gmail.com 587`
+   - Test connectivity: `telnet smtp.gmail.com 587`
 
 2. **Authentication failures**:
-   - Gmail: Use App Password, not regular password
-   - Enable "Less secure apps" if needed
-   - Check username format (full email address)
+   - **Gmail**: Must use App Password (16 characters, no spaces)
+   - **Outlook.com**: Requires app password with 2FA enabled
+   - **Microsoft 365**: OAuth2 required; app passwords deprecated
+   - **Yahoo**: Requires app-specific password
 
-3. **TLS/SSL errors**:
-   - Set `use_tls: true` for port 587
-   - Try `use_tls: false` for port 465 (SSL)
-   - Update certificates if expired
-
-4. **Emails not received**:
+3. **Emails not received**:
    - Check spam/junk folder
-   - Verify recipient address
-   - Check SMTP server logs
-   - Test with simple subject/content first
-
-### Error Messages
-
-| Error | Cause | Solution |
-|-------|-------|----------|
-| "Invalid webhook URL" | Malformed URL | Check URL format and copy again |
-| "404 Not Found" | Webhook deleted | Create new webhook |
-| "401 Unauthorized" | Invalid token | Regenerate webhook URL |
-| "429 Too Many Requests" | Rate limited | Wait and reduce broadcast_limit |
-| "400 Bad Request" | Invalid message format | Check logs for details |
-
-### Debugging
-
-Enable debug logging:
-```bash
-# Verbose broadcast with log file
-papersorter broadcast --log-file debug.log
-
-# Check notification provider detection
-python -c "
-from PaperSorter.notification import create_notification_provider
-url = 'YOUR_WEBHOOK_URL'
-provider = create_notification_provider(url)
-print(f'Detected provider: {provider.__class__.__name__}')
-"
-```
+   - Verify recipient address in channel config
+   - Check sender reputation (SPF/DKIM records)
 
 ## Best Practices
 
@@ -402,8 +391,6 @@ print(f'Detected provider: {provider.__class__.__name__}')
 
 ### Multiple Models per Channel
 
-You can use different trained models for different channels:
-
 ```python
 # Train specialized models
 papersorter train -o model_ml.pkl      # For ML papers
@@ -416,22 +403,14 @@ UPDATE channels SET model_id = 3 WHERE name = 'Bio Research';
 
 ### Scheduled Broadcasts
 
-Set up a cron job to run every hour:
+Set up a cron job:
 
 ```bash
 # Run broadcast every hour (channels have individual hour restrictions)
 0 * * * * /path/to/papersorter broadcast --config /path/to/config.yml
 ```
 
-The broadcast task will automatically respect each channel's configured broadcast hours. Configure hours per channel in the web interface (Settings → Channels).
-
-### Filtering by Date
-
-Only broadcast recent papers:
-```bash
-# Clear old items from queue (default: 30 days)
-papersorter broadcast --clear-old-days 7  # Only last week's papers
-```
+The broadcast task will automatically respect each channel's configured broadcast hours.
 
 ## Security Considerations
 

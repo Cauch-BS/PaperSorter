@@ -1,4 +1,4 @@
-# OAuth Setup Guide
+# OAuth Authentication Setup
 
 PaperSorter supports authentication via Google OAuth, GitHub OAuth, and ORCID OAuth. You can configure any combination of these providers. ORCID is particularly recommended for academic websites as it provides unique researcher identifiers.
 
@@ -254,9 +254,39 @@ OAuth users are stored in the `users` table with the following relevant fields:
 - `password`: Set to "oauth" for OAuth users
 - `lastlogin`: Automatically updated on login and during active sessions (throttled to every 10 minutes)
 - `created`: Timestamp of first login
-- `is_admin`: Admin status (default: false)
+- `is_admin`: Admin status (default: false, can be auto-promoted via config on login)
 
-Admin privileges must be granted manually via database update:
+## Managing Admin Privileges
+
+### Automatic Admin Promotion via Configuration (Recommended)
+
+Add users to the `admin_users` list in your `config.yml`. Users in this list are automatically promoted to admin on login:
+
+```yaml
+# config.yml
+admin_users:
+  # Email addresses for Google/GitHub OAuth
+  - "admin@example.com"
+  - "researcher@university.edu"
+  # ORCID identifiers (must include @orcid.org suffix)
+  - "0000-0002-1825-0097@orcid.org"
+  - "0000-0003-4567-8901@orcid.org"
+```
+
+Important notes about this approach:
+- Users in the list are automatically promoted to admin on login
+- **The list only promotes, never demotes** - existing admins remain admins even if not in the list
+- To revoke admin privileges, use the web interface or database updates
+- Useful for ensuring specific users always have admin access
+- No database access required for initial setup
+
+### Manual Admin Assignment
+
+#### Via Web Interface
+Administrators can manage user privileges through Settings → Users in the web interface.
+
+#### Via Database
+For immediate changes without waiting for the next login:
 
 ```sql
 -- For email-based providers (Google, GitHub)
@@ -265,3 +295,5 @@ UPDATE users SET is_admin = true WHERE username = 'admin@example.com';
 -- For ORCID users
 UPDATE users SET is_admin = true WHERE username = '0000-0002-1825-0097@orcid.org';
 ```
+
+Note: Admin privileges set via database are permanent unless explicitly revoked. The `admin_users` list only promotes users, never demotes them.

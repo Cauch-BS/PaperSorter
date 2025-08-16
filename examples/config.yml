@@ -2,6 +2,18 @@
 # Copy this file to your preferred location and update with your credentials
 # Default location: ./config.yml
 
+# Admin users configuration
+# Users listed here will automatically be promoted to admin upon login
+# Note: This list only promotes users, it never demotes existing admins
+# To remove admin privileges, use the web interface or database updates
+admin_users:
+  # Example email addresses for Google/GitHub OAuth
+  # - "admin@example.com"
+  # - "researcher@university.edu"
+  # Example ORCID identifiers (must include @orcid.org suffix)
+  # - "0000-0002-1825-0097@orcid.org"
+  # - "0000-0003-4567-8901@orcid.org"
+
 # Database configuration
 db:
   type: postgres
